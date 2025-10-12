@@ -51,6 +51,17 @@ QVariantMap QgsArcGisRestQueryUtils::getLayerInfo( const QString &layerurl, cons
   return queryServiceJSON( queryUrl, authcfg, errorTitle, errorText, requestHeaders, nullptr, urlPrefix );
 }
 
+QVariantMap QgsArcGisRestQueryUtils::getLayerAdvancedSymbolsInfo( const QString &layerurl, const QString &authcfg, QString &errorTitle, QString &errorText, const QgsHttpHeaders &requestHeaders, const QString &urlPrefix )
+{
+  // http://sampleserver5.arcgisonline.com/arcgis/rest/services/Energy/Geology/FeatureServer/1?f=json
+  QUrl queryUrl( layerurl );
+  QUrlQuery query( queryUrl );
+  query.addQueryItem( QStringLiteral( "f" ), QStringLiteral( "json" ) );
+  query.addQueryItem( QStringLiteral( "returnAdvancedSymbols" ), QStringLiteral( "true" ) );
+  queryUrl.setQuery( query );
+  return queryServiceJSON( queryUrl, authcfg, errorTitle, errorText, requestHeaders, nullptr, urlPrefix );
+}
+
 QVariantMap QgsArcGisRestQueryUtils::getObjectIds( const QString &layerurl, const QString &authcfg, QString &errorTitle, QString &errorText, const QgsHttpHeaders &requestHeaders, const QString &urlPrefix, const QgsRectangle &bbox, const QString &whereClause )
 {
   // http://sampleserver5.arcgisonline.com/arcgis/rest/services/Energy/Geology/FeatureServer/1/query?where=1%3D1&returnIdsOnly=true&f=json

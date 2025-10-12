@@ -29,11 +29,17 @@
 #include "qgsfeedback.h"
 #include "qgsreadwritelocker.h"
 #include "qgsvariantutils.h"
+#include "qgssettings.h"
 
 
 QgsAfsProvider::QgsAfsProvider( const QString &uri, const ProviderOptions &options, Qgis::DataProviderReadFlags flags )
   : QgsVectorDataProvider( uri, options, flags )
 {
+
+  QgsSettings settings;
+
+  mUseAfsAdvancedSymbols = settings.value( QStringLiteral( "/qgis/afsUseAdvancedSymbols" ), false ).toBool();
+
   mSharedData.reset( new QgsAfsSharedData( QgsDataSourceUri( uri ) ) );
   mSharedData->mGeometryType = Qgis::WkbType::Unknown;
 
@@ -53,7 +59,31 @@ QgsAfsProvider::QgsAfsProvider( const QString &uri, const ProviderOptions &optio
   if ( QgsApplication::profiler()->groupIsActive( QStringLiteral( "projectload" ) ) )
     profile = std::make_unique<QgsScopedRuntimeProfile>( tr( "Retrieve service definition" ), QStringLiteral( "projectload" ) );
 
-  const QVariantMap layerData = QgsArcGisRestQueryUtils::getLayerInfo( mSharedData->mDataSource.param( QStringLiteral( "url" ) ), authcfg, errorTitle, errorMessage, mRequestHeaders, urlPrefix );
+  QVariantMap layerData;
+  if(mUseAfsAdvancedSymbols)
+  {
+    layerData = QgsArcGisRestQueryUtils::getLayerAdvancedSymbolsInfo(
+        mSharedData->mDataSource.param(QStringLiteral("url")),
+        authcfg,
+        errorTitle,
+        errorMessage,
+        mRequestHeaders,
+        urlPrefix
+    );
+  }
+  else
+  {
+    layerData = QgsArcGisRestQueryUtils::getLayerInfo(
+        mSharedData->mDataSource.param(QStringLiteral("url")),
+        authcfg,
+        errorTitle,
+        errorMessage,
+        mRequestHeaders,
+        urlPrefix
+    );
+  }
+
+  
   if ( layerData.isEmpty() )
   {
     pushError( errorTitle + ": " + errorMessage );

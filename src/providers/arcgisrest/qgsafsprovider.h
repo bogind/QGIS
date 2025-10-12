@@ -105,6 +105,7 @@ class QgsAfsProvider : public QgsVectorDataProvider
     QString mAdminUrl;
     QVariantMap mAdminData;
     QStringList mAdminCapabilityStrings;
+    bool mUseAfsAdvancedSymbols = false;
 
     /**
      * Clears cache

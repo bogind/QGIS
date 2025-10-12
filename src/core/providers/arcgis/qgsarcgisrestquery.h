@@ -60,6 +60,11 @@ class CORE_EXPORT QgsArcGisRestQueryUtils
     static QVariantMap getLayerInfo( const QString &layerurl, const QString &authcfg, QString &errorTitle, QString &errorText, const QgsHttpHeaders &requestHeaders = QgsHttpHeaders(), const QString &urlPrefix = QString() );
 
     /**
+     * Retrieves JSON layer info for the specified layer URL with advanced CIM symbols.
+     */
+    static QVariantMap getLayerAdvancedSymbolsInfo( const QString &layerurl, const QString &authcfg, QString &errorTitle, QString &errorText, const QgsHttpHeaders &requestHeaders = QgsHttpHeaders(), const QString &urlPrefix = QString() );
+
+    /**
      * Retrieves all object IDs for the specified layer URL.
      */
     static QVariantMap getObjectIds( const QString &layerurl, const QString &authcfg, QString &errorTitle, QString &errorText, const QgsHttpHeaders &requestHeaders = QgsHttpHeaders(), const QString &urlPrefix = QString(),
