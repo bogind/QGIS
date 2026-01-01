@@ -30,6 +30,7 @@
 #include "qgslogger.h"
 #include "qgsreadwritelocker.h"
 #include "qgsruntimeprofiler.h"
+#include "qgssettings.h"
 #include "qgsvariantutils.h"
 
 #include "moc_qgsafsprovider.cpp"
@@ -37,6 +38,8 @@
 QgsAfsProvider::QgsAfsProvider( const QString &uri, const ProviderOptions &options, Qgis::DataProviderReadFlags flags )
   : QgsVectorDataProvider( uri, options, flags )
 {
+  QgsSettings settings;
+  bool mAfsUseAdvancedSymbols = settings.value( u"/qgis/afsUseAdvancedSymbols"_s, false ).toBool();
   mSharedData = std::make_shared<QgsAfsSharedData>( QgsDataSourceUri( uri ) );
   mSharedData->mGeometryType = Qgis::WkbType::Unknown;
 
@@ -56,7 +59,7 @@ QgsAfsProvider::QgsAfsProvider( const QString &uri, const ProviderOptions &optio
   if ( QgsApplication::profiler()->groupIsActive( u"projectload"_s ) )
     profile = std::make_unique<QgsScopedRuntimeProfile>( tr( "Retrieve service definition" ), u"projectload"_s );
 
-  const QVariantMap layerData = QgsArcGisRestQueryUtils::getLayerInfo( mSharedData->mDataSource.param( u"url"_s ), authcfg, errorTitle, errorMessage, mRequestHeaders, urlPrefix );
+  const QVariantMap layerData = QgsArcGisRestQueryUtils::getLayerInfo( mSharedData->mDataSource.param( u"url"_s ), authcfg, errorTitle, errorMessage, mRequestHeaders, urlPrefix, mAfsUseAdvancedSymbols );
   if ( layerData.isEmpty() )
   {
     pushError( errorTitle + ": " + errorMessage );
@@ -78,7 +81,7 @@ QgsAfsProvider::QgsAfsProvider( const QString &uri, const ProviderOptions &optio
     if ( adminUrl.contains( u"/rest/services/"_s ) )
     {
       adminUrl.replace( "/rest/services/"_L1, "/rest/admin/services/"_L1 );
-      const QVariantMap adminData = QgsArcGisRestQueryUtils::getLayerInfo( adminUrl, authcfg, errorTitle, errorMessage, mRequestHeaders, urlPrefix );
+      const QVariantMap adminData = QgsArcGisRestQueryUtils::getLayerInfo( adminUrl, authcfg, errorTitle, errorMessage, mRequestHeaders, urlPrefix, mAfsUseAdvancedSymbols );
       if ( !adminData.isEmpty() )
       {
         mAdminUrl = adminUrl;

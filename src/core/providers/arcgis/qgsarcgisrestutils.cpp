@@ -36,6 +36,7 @@
 #include "qgslogger.h"
 #include "qgsmarkersymbol.h"
 #include "qgsmarkersymbollayer.h"
+#include "qgsmessagelog.h"
 #include "qgsmulticurve.h"
 #include "qgsmultilinestring.h"
 #include "qgsmultipoint.h"
@@ -577,6 +578,14 @@ QgsSymbol *QgsArcGisRestUtils::convertSymbol( const QVariantMap &symbolData )
   {
     return parseEsriTextMarkerSymbolJson( symbolData ).release();
   }
+  else if ( type == "CIMSymbolReference"_L1 )
+  {
+    QgsMessageLog::logMessage(
+      "Parsing CIMSymbolReference symbology is still experimental and not fully supported",
+      u"QgsArcGisRestUtils"_s,
+      Qgis::MessageLevel::Info );
+    return parseCIMSymbol( symbolData ).release();
+  }
   return nullptr;
 }
 
@@ -834,6 +843,14 @@ std::unique_ptr<QgsMarkerSymbol> QgsArcGisRestUtils::parseEsriTextMarkerSymbolJs
 
   auto symbol = std::make_unique< QgsMarkerSymbol >( layers );
   return symbol;
+}
+
+std::unique_ptr<QgsSymbol> QgsArcGisRestUtils::parseCIMSymbol( const QVariantMap &symbolData )
+{
+  // Experimental CIMSymbol parsing
+  //QByteArray cimJson = QJsonDocument::fromVariant( symbolData ).toJson();
+  //return QgsCimSymbolUtils::symbolFromCimJson( cimJson );
+  return nullptr;
 }
 
 QgsAbstractVectorLayerLabeling *QgsArcGisRestUtils::convertLabeling( const QVariantList &labelingData )

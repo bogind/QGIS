@@ -57,7 +57,7 @@ class CORE_EXPORT QgsArcGisRestQueryUtils
     /**
      * Retrieves JSON layer info for the specified layer URL.
      */
-    static QVariantMap getLayerInfo( const QString &layerurl, const QString &authcfg, QString &errorTitle, QString &errorText, const QgsHttpHeaders &requestHeaders = QgsHttpHeaders(), const QString &urlPrefix = QString() );
+    static QVariantMap getLayerInfo( const QString &layerurl, const QString &authcfg, QString &errorTitle, QString &errorText, const QgsHttpHeaders &requestHeaders = QgsHttpHeaders(), const QString &urlPrefix = QString(), bool useAdvancedSymbols = false );
 
     /**
      * Retrieves all object IDs for the specified layer URL.

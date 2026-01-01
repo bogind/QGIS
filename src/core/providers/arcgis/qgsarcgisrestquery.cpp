@@ -45,12 +45,16 @@ QVariantMap QgsArcGisRestQueryUtils::getServiceInfo( const QString &baseurl, con
   return queryServiceJSON( queryUrl, authcfg, errorTitle, errorText, requestHeaders, nullptr, urlPrefix );
 }
 
-QVariantMap QgsArcGisRestQueryUtils::getLayerInfo( const QString &layerurl, const QString &authcfg, QString &errorTitle, QString &errorText, const QgsHttpHeaders &requestHeaders, const QString &urlPrefix )
+QVariantMap QgsArcGisRestQueryUtils::getLayerInfo( const QString &layerurl, const QString &authcfg, QString &errorTitle, QString &errorText, const QgsHttpHeaders &requestHeaders, const QString &urlPrefix, bool useAdvancedSymbols )
 {
   // http://sampleserver5.arcgisonline.com/arcgis/rest/services/Energy/Geology/FeatureServer/1?f=json
   QUrl queryUrl( layerurl );
   QUrlQuery query( queryUrl );
   query.addQueryItem( u"f"_s, u"json"_s );
+  if ( useAdvancedSymbols )
+  {
+    query.addQueryItem( u"returnAdvancedSymbols"_s, u"true"_s );
+  }
   queryUrl.setQuery( query );
   return queryServiceJSON( queryUrl, authcfg, errorTitle, errorText, requestHeaders, nullptr, urlPrefix );
 }
