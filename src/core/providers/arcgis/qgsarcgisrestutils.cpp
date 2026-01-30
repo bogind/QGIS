@@ -847,11 +847,311 @@ std::unique_ptr<QgsMarkerSymbol> QgsArcGisRestUtils::parseEsriTextMarkerSymbolJs
 
 std::unique_ptr<QgsSymbol> QgsArcGisRestUtils::parseCIMSymbol( const QVariantMap &symbolData )
 {
-  // Experimental CIMSymbol parsing
-  //QByteArray cimJson = QJsonDocument::fromVariant( symbolData ).toJson();
-  //return QgsCimSymbolUtils::symbolFromCimJson( cimJson );
+  const QVariantMap symbol = symbolData.value( u"symbol"_s ).toMap();
+  const QString type = symbol.value( u"type"_s ).toString();
+  const QVariantList layers = symbol.value( u"symbolLayers"_s ).toList();
+
+  if ( type == "CIMPointSymbol"_L1 )
+  {
+    // marker symbol
+    QgsMessageLog::logMessage(
+      u"Parsing of %1 is not fully supported yet"_s.arg( type ),
+      u"QgsArcGisRestUtils"_s,
+      Qgis::MessageLevel::Info );
+    //return parseEsriCIMPointSymbolJson( symbolData ).release();
+    return nullptr;
+  }
+  else if ( type == "CIMLineSymbol"_L1 )
+  {
+    // line symbol
+    QgsMessageLog::logMessage(
+      u"Parsing of %1 is not fully supported yet"_s.arg( type ),
+      u"QgsArcGisRestUtils"_s,
+      Qgis::MessageLevel::Info );
+    //return parseEsriCIMLineSymbolJson( symbolData ).release();
+    return nullptr;
+  }
+  else if ( type == "CIMPolygonSymbol"_L1 )
+  {
+    // fill symbol
+    return std::unique_ptr<QgsSymbol>( parseEsriCIMPolygonSymbolJson( symbolData ).release() );
+  }
+  else if ( type == "CIMPictureMarkerSymbol"_L1 )
+  {
+    // picture marker
+    QgsMessageLog::logMessage(
+      u"Parsing of %1 is not fully supported yet"_s.arg( type ),
+      u"QgsArcGisRestUtils"_s,
+      Qgis::MessageLevel::Info );
+    //return parseEsriCIMPMSymbolJson( symbolData ).release();
+    return nullptr;
+  }
+  else if ( type == "CIMTextSymbol"_L1 )
+  {
+    //return parseEsriCIMTextMarkerSymbolJson( symbolData ).release();
+    QgsMessageLog::logMessage(
+      u"Parsing of %1 is not fully supported yet"_s.arg( type ),
+      u"QgsArcGisRestUtils"_s,
+      Qgis::MessageLevel::Info );
+    return nullptr;
+  }
   return nullptr;
 }
+
+std::unique_ptr<QgsFillSymbol> QgsArcGisRestUtils::parseEsriCIMPolygonSymbolJson( const QVariantMap &symbolData )
+{
+  const QVariantMap symbol = symbolData.value( u"symbol"_s ).toMap();
+  const QString type = symbol.value( u"type"_s ).toString();
+
+  if ( type != "CIMPolygonSymbol"_L1 )
+  {
+    return nullptr; // Ensure the symbol type is correct
+  }
+
+  const QVariantList symbolLayers = symbol.value( u"symbolLayers"_s ).toList();
+  QgsSymbolLayerList layers;
+
+
+  for ( const QVariant &layerVariant : symbolLayers )
+  {
+    const QVariantMap layerData = layerVariant.toMap();
+    const QString layerType = layerData.value( u"type"_s ).toString();
+    if ( layerType.isEmpty() )
+      continue;
+
+    if ( layerType == "CIMFilledStroke"_L1 )
+    {
+      // Handle CIMFilledStroke (outline)
+      const QVariantMap pattern = layerData.value( u"pattern"_s ).toMap();
+      const QColor lineColor = convertColor( pattern.value( u"color"_s ) );
+      bool ok = false;
+      double widthInPoints = layerData.value( u"width"_s ).toDouble( &ok );
+      if ( !ok )
+        return nullptr;
+      const Qt::PenStyle penStyle = convertLineStyle( pattern.value( "type" ).toString() ); // Default to solid line (adjust if needed)
+
+      auto lineLayer = std::make_unique<QgsSimpleLineSymbolLayer>( lineColor, widthInPoints, penStyle );
+      lineLayer->setWidthUnit( Qgis::RenderUnit::Points );
+
+
+      layers.append( lineLayer.release() );
+    }
+    else if ( layerType == "CIMSolidStroke"_L1 )
+    {
+      // Handle CIMSolidStroke (outline)
+      const QColor lineColor = convertColor( layerData.value( u"color"_s ) );
+      bool ok = false;
+      double widthInPoints = layerData.value( u"width"_s ).toDouble( &ok );
+      if ( !ok )
+        return nullptr;
+      const Qt::PenStyle penStyle = convertLineStyle( layerData.value( "type" ).toString() ); // Default to solid line (adjust if needed)
+
+      auto lineLayer = std::make_unique<QgsSimpleLineSymbolLayer>( lineColor, widthInPoints, penStyle );
+      lineLayer->setWidthUnit( Qgis::RenderUnit::Points );
+
+      layers.append( lineLayer.release() );
+    }
+    else if ( layerType == "CIMSolidFill"_L1 )
+    {
+      // Handle CIMSolidFill (fill)
+      const QColor fillColor = convertColor( layerData.value( u"color"_s ) );
+      const Qt::BrushStyle brushStyle = Qt::SolidPattern; // Default to solid fill (adjust if needed)
+
+      auto fillLayer = std::make_unique<QgsSimpleFillSymbolLayer>( fillColor, brushStyle );
+      layers.append( fillLayer.release() );
+    }
+    else if ( layerType == "CIMFill"_L1 )
+    {
+      // Handle CIMFill (fill)
+      const QVariantMap pattern = layerData.value( u"pattern"_s ).toMap();
+      if ( pattern.isEmpty() )
+        continue;
+
+      const QString patternType = pattern.value( u"type"_s ).toString();
+      if ( patternType == "CIMSolidPattern"_L1 )
+      {
+        // Handle solid fill
+        const QColor fillColor = convertColor( pattern.value( u"color"_s ) );
+        const Qt::BrushStyle brushStyle = Qt::SolidPattern; // Default to solid fill (adjust if needed)
+
+        auto fillLayer = std::make_unique<QgsSimpleFillSymbolLayer>( fillColor, brushStyle );
+        layers.append( fillLayer.release() );
+      }
+      else if ( patternType == "CIMHatchPattern"_L1 )
+      {
+        // Handle hatch fill
+        double rotation = pattern.value( u"rotation"_s ).toDouble();
+        double separation = pattern.value( u"separation"_s ).toDouble();
+        QVariantMap lineSymbol = pattern.value( u"lineSymbol"_s ).toMap();
+        QString lineSymbolType = lineSymbol.value( u"type"_s ).toString();
+        if ( lineSymbolType == "CIMLineSymbol" )
+        {
+          QVariantList lineSymbolLayers = lineSymbol.value( u"symbolLayers"_s ).toList();
+          // Can only have one symbol layer
+          if ( lineSymbolLayers.size() == 1 )
+          {
+            QVariantMap lineLayerData = lineSymbolLayers[0].toMap();
+            QVariantMap linePattern = lineLayerData.value( u"pattern"_s ).toMap();
+            const QColor lineColor = convertColor( linePattern.value( u"color"_s ) );
+
+            bool ok = false;
+            double widthInPoints = lineLayerData.value( u"width"_s ).toDouble( &ok );
+            if ( !ok )
+              return nullptr;
+
+            // Create the QgsLinePatternFillSymbolLayer
+            auto hatchLayer = std::make_unique<QgsLinePatternFillSymbolLayer>();
+            hatchLayer->setColor( lineColor );
+            hatchLayer->setLineWidth( widthInPoints );
+            hatchLayer->setLineAngle( rotation );
+            hatchLayer->setDistance( separation );
+
+            // Set the units for width and separation to points
+            hatchLayer->setLineWidthUnit( Qgis::RenderUnit::Points );
+            hatchLayer->setDistanceUnit( Qgis::RenderUnit::Points );
+
+            layers.append( hatchLayer.release() );
+          }
+        }
+      }
+      else
+      {
+        QgsMessageLog::logMessage(
+          u"Unsupported pattern type: %1"_s.arg( patternType ),
+          u"QgsArcGisRestUtils"_s,
+          Qgis::MessageLevel::Warning
+        );
+        // Handle unsupported pattern types
+      }
+    }
+    else if ( layerType == "CIMHatchFill"_L1 )
+    {
+
+      // Handle CIMFill (fill)
+      const QVariantMap lineSymbol = layerData.value( u"lineSymbol"_s ).toMap();
+      if ( lineSymbol.isEmpty() )
+        continue;
+
+      const QString lineSymbolType = lineSymbol.value( u"type"_s ).toString();
+      if ( lineSymbolType == "CIMLineSymbol"_L1 )
+      {
+        // Handle hatch fill
+        double rotation = layerData.value( u"rotation"_s ).toDouble();
+        double separation = layerData.value( u"separation"_s ).toDouble();
+
+        QString lineSymbolType = lineSymbol.value( u"type"_s ).toString();
+        QVariantList lineSymbolLayers = lineSymbol.value( u"symbolLayers"_s ).toList();
+        // Can only have one symbol layer
+        if ( lineSymbolLayers.size() == 1 )
+        {
+          QVariantMap lineLayerData = lineSymbolLayers[0].toMap();
+          const QColor lineColor = convertColor( lineLayerData.value( u"color"_s ) );
+
+          bool ok = false;
+          double widthInPoints = lineLayerData.value( u"width"_s ).toDouble( &ok );
+          if ( !ok )
+            return nullptr;
+
+          // Create the QgsLinePatternFillSymbolLayer
+          auto hatchLayer = std::make_unique<QgsLinePatternFillSymbolLayer>();
+          hatchLayer->setColor( lineColor );
+          hatchLayer->setLineWidth( widthInPoints );
+          hatchLayer->setLineAngle( rotation );
+          hatchLayer->setDistance( separation );
+
+          // Set the units for width and separation to points
+          hatchLayer->setLineWidthUnit( Qgis::RenderUnit::Points );
+          hatchLayer->setDistanceUnit( Qgis::RenderUnit::Points );
+
+          // in case the line width unit is not passed properly
+          QgsLineSymbol *hatchLayerSubSymbol = dynamic_cast<QgsLineSymbol *>( hatchLayer->subSymbol() );
+          if ( hatchLayerSubSymbol )
+          {
+            hatchLayerSubSymbol->setWidth( widthInPoints );
+            hatchLayerSubSymbol->setWidthUnit( Qgis::RenderUnit::Points );
+          }
+
+          layers.append( hatchLayer.release() );
+        }
+
+      }
+      else
+      {
+        QgsMessageLog::logMessage(
+          u"Unsupported lineSymbol type: %1"_s.arg( lineSymbolType ),
+          u"QgsArcGisRestUtils"_s,
+          Qgis::MessageLevel::Warning
+        );
+        // Handle unsupported pattern types
+      }
+    }
+    else
+    {
+      QgsMessageLog::logMessage(
+        u"Unsupported layer type: %1"_s.arg( layerType ),
+        u"QgsArcGisRestUtils"_s,
+        Qgis::MessageLevel::Warning
+      );
+      // Handle unsupported layer types
+    }
+  }
+
+  // Reverse the order of the layers
+  std::reverse( layers.begin(), layers.end() );
+  // Create and return the QgsFillSymbol with the parsed layers
+  return std::make_unique<QgsFillSymbol>( layers );
+}
+
+std::unique_ptr<QgsMarkerSymbol> QgsArcGisRestUtils::parseEsriCIMPointSymbolJson( const QVariantMap &symbolData )
+{
+  const QVariantMap symbol = symbolData.value( u"symbol"_s ).toMap();
+  const QString type = symbol.value( u"type"_s ).toString();
+
+  if ( type != "CIMPointSymbol"_L1 )
+  {
+    return nullptr; // Ensure the symbol type is correct
+  }
+
+  const QVariantList symbolLayers = symbol.value( u"symbolLayers"_s ).toList();
+  QgsSymbolLayerList layers;
+
+  // Iterate through the symbol layers and parse them
+  for ( const QVariant &layerVariant : symbolLayers )
+  {
+    const QVariantMap layerData = layerVariant.toMap();
+    const QString layerType = layerData.value( u"type"_s ).toString();
+    if ( layerType.isEmpty() )
+      continue;
+
+    if ( layerType == "CIMVectorMarker"_L1 )
+    {
+      double size = layerData.value( u"size"_s ).toDouble();
+      QVariantMap frame = layerData.value( u"frame"_s ).toMap();
+      double xMin = frame.value( u"xMin"_s ).toDouble();
+      double yMin = frame.value( u"yMin"_s ).toDouble();
+      double xMax = frame.value( u"xMax"_s ).toDouble();
+      double yMax = frame.value( u"yMax"_s ).toDouble();
+      const QVariantList markerGraphicLayers = layerData.value( u"markerGraphics"_s ).toList();
+
+      // Iterate through marker graphic layers and add to main layers
+      for ( const QVariant &graphicLayerVariant : markerGraphicLayers )
+      {
+        const QVariantMap graphicLayerData = graphicLayerVariant.toMap();
+        const QString graphicLayerType = graphicLayerData.value( u"type"_s ).toString();
+        if ( graphicLayerType == "CIMMarkerGraphic"_L1 )
+        {
+          const QVariantMap graphicLayerGeometry = graphicLayerData.value( u"geometry"_s ).toMap();
+          const QVariantMap graphicLayerSymbol = graphicLayerData.value( u"symbol"_s ).toMap();
+
+
+        }
+      }
+
+    }
+  }
+
+}
+
 
 QgsAbstractVectorLayerLabeling *QgsArcGisRestUtils::convertLabeling( const QVariantList &labelingData )
 {
