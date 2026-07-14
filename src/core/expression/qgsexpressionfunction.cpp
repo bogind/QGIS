@@ -7928,6 +7928,58 @@ static QVariant fcnFromBase64( const QVariantList &values, const QgsExpressionCo
 
 typedef bool ( QgsGeometry::*RelationFunction )( const QgsGeometry &geometry ) const;
 
+// Helper to build the hash for user bookmarks
+static QHash<QString, QVariantMap> loadUserBookmarks()
+{
+  QHash<QString, QVariantMap> bookmarks;
+  const auto userBookmarks = QgsApplication::bookmarkManager()->bookmarks();
+  for ( const QgsBookmark &b : userBookmarks )
+  {
+    QVariantMap map;
+    map["id"] = b.id();
+    map["name"] = b.name();
+    map["group"] = b.group();
+
+    QVariantMap extentMap;
+    extentMap["x_min"] = b.extent().xMinimum();
+    extentMap["y_min"] = b.extent().yMinimum();
+    extentMap["x_max"] = b.extent().xMaximum();
+    extentMap["y_max"] = b.extent().yMaximum();
+    map["extent_rect"] = extentMap;
+
+    map["width"] = b.extent().width();
+    map["height"] = b.extent().height();
+    map["crs"] = b.extent().crs().authid();
+    map["rotation"] = b.rotation();
+
+    QgsGeometry geomBounds = QgsGeometry::fromRect( b.extent() );
+    QVariant result = !geomBounds.isNull() ? QVariant::fromValue( geomBounds ) : QVariant();
+    map["extent"] = result;
+
+    bookmarks[b.name()] = map;
+  }
+  return bookmarks;
+}
+
+GetNamedUserBookmark::GetNamedUserBookmark()
+  : QgsScopedExpressionFunction( QStringLiteral( "user_bookmark" ), 1, QStringLiteral( "Bookmarks" ) )
+{}
+
+QVariant GetNamedUserBookmark::func( const QVariantList &values, const QgsExpressionContext *, QgsExpression *, const QgsExpressionNodeFunction * )
+{
+  if ( values.isEmpty() )
+    return QVariant();
+
+  const QString name = values.at( 0 ).toString();
+  const auto bookmarks = loadUserBookmarks();
+  return bookmarks.value( name );
+}
+
+QgsScopedExpressionFunction *GetNamedUserBookmark::clone() const
+{
+  return new GetNamedUserBookmark();
+}
+
 static QVariant executeGeomOverlay( const QVariantList &values, const QgsExpressionContext *context, QgsExpression *parent, const RelationFunction &relationFunction, bool invert = false, double bboxGrow = 0, bool isNearestFunc = false, bool isIntersectsFunc = false )
 {
 
@@ -9761,6 +9813,7 @@ const QList<QgsExpressionFunction *> &QgsExpression::Functions()
         << new QgsWithVariableExpressionFunction()
         << new QgsStaticExpressionFunction( QStringLiteral( "raster_value" ), QgsExpressionFunction::ParameterList() << QgsExpressionFunction::Parameter( QStringLiteral( "layer" ) ) << QgsExpressionFunction::Parameter( QStringLiteral( "band" ) ) << QgsExpressionFunction::Parameter( QStringLiteral( "point" ) ), fcnRasterValue, QStringLiteral( "Rasters" ) )
         << new QgsStaticExpressionFunction( QStringLiteral( "raster_attributes" ), QgsExpressionFunction::ParameterList() << QgsExpressionFunction::Parameter( QStringLiteral( "layer" ) ) << QgsExpressionFunction::Parameter( QStringLiteral( "band" ) ) << QgsExpressionFunction::Parameter( QStringLiteral( "point" ) ), fcnRasterAttributes, QStringLiteral( "Rasters" ) )
+
 
         // functions for arrays
         << new QgsArrayForeachExpressionFunction()
