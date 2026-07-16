@@ -75,6 +75,9 @@ QgsVectorRenderingOptionsWidget::QgsVectorRenderingOptionsWidget( QWidget *paren
   mSimplifyAlgorithmComboBox->addItem( tr( "SnapToGrid" ), QVariant::fromValue( Qgis::VectorSimplificationAlgorithm::SnapToGrid ) );
   mSimplifyAlgorithmComboBox->addItem( tr( "Visvalingam" ), QVariant::fromValue( Qgis::VectorSimplificationAlgorithm::Visvalingam ) );
   mSimplifyAlgorithmComboBox->setCurrentIndex( mSimplifyAlgorithmComboBox->findData( QVariant::fromValue( QgsVectorLayer::settingsSimplifyAlgorithm->value() ) ) );
+
+  // Toggle using ArcGIS Feature Server Advanced Symbols
+  mAfsAdvancedSymbolsCheckBox->setChecked( QgsSettingsRegistryGui::settingsAfsUseAdvancedSymbols->value() );
 }
 
 QString QgsVectorRenderingOptionsWidget::helpKey() const
@@ -109,6 +112,9 @@ void QgsVectorRenderingOptionsWidget::apply()
     segmentationTolerance = segmentationTolerance / 180.0 * M_PI; //user sets angle tolerance in degrees, internal classes need value in rad
   }
   QgsSettingsRegistryGui::settingsSegmentationTolerance->setValue( segmentationTolerance );
+
+  // Toggle using ArcGIS Feature Server Advanced Symbols
+  QgsSettingsRegistryGui::settingsAfsUseAdvancedSymbols->setValue( mAfsAdvancedSymbolsCheckBox->isChecked() );
 }
 
 

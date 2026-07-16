@@ -105,6 +105,9 @@ class GUI_EXPORT QgsSettingsRegistryGui : public QgsSettingsRegistry
     //! Settings entry segmentation tolerance type for curved geometries
     static const QgsSettingsEntryEnumFlag<QgsAbstractGeometry::SegmentationToleranceType> *settingsSegmentationToleranceType;
 
+    //! Settings entry whether to use ArcGIS Feature Server Advanced Symbols
+    static const QgsSettingsEntryBool *settingsAfsUseAdvancedSymbols;
+
 #endif
 };
 

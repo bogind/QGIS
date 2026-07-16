@@ -97,6 +97,9 @@ const QgsSettingsEntryColor *QgsSettingsRegistryGui::settingsDefaultMeasureColor
 const QgsSettingsEntryEnumFlag<QgsAbstractGeometry::SegmentationToleranceType> *QgsSettingsRegistryGui::settingsSegmentationToleranceType = new QgsSettingsEntryEnumFlag<
   QgsAbstractGeometry::SegmentationToleranceType>( u"segmentation-tolerance-type"_s, QgsSettingsTree::sTreeQgis, QgsAbstractGeometry::MaximumAngle, u"Segmentation tolerance type for curved geometries"_s );
 
+const QgsSettingsEntryBool *QgsSettingsRegistryGui::settingsAfsUseAdvancedSymbols
+  = new QgsSettingsEntryBool( u"afs-use-advanced-symbols"_s, QgsSettingsTree::sTreeQgis, false, u"Whether to use ArcGIS Feature Server Advanced Symbols"_s );
+
 QgsSettingsRegistryGui::QgsSettingsRegistryGui()
   : QgsSettingsRegistry()
 {
